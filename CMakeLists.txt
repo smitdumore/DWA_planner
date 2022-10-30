@@ -17,17 +17,19 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf
 )
-#find_package(Eigen3 REQUIRED)
+set(CMAKE_PREFIX_PATH /usr/local/lib/cmake)
+find_package(Eigen3 REQUIRED)
 
 catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES dwa_planner
+  #INCLUDE_DIRS include
+  #LIBRARIES dwa_planner
   #${EIGEN3_INCLUDE_DIRS}
 )
 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 ###########
