@@ -5,17 +5,14 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh){
     scan_sub = nh_.subscribe("/scan", 1, &Planner::scan_callback, this);
     odom_sub = nh_.subscribe("/odom", 10, &Planner::odom_callback, this);
     trajectories_viz_pub = nh_.advertise<visualization_msgs::MarkerArray>("/dwa_trajs", 10);
-    //test_pub = nh_.advertise<visualization_msgs::Marker>("/test_vis", 10);
-    points_pub = nh_.advertise<visualization_msgs::Marker>("/test_vis", 10);
 
     nh_.param("HZ", HZ, 20.0);
-    //nh_.param("ROBOT_FRAME", ROBOT_FRAME, {"base_footprint"});
     nh_.param("TARGET_VELOCITY", TARGET_VELOCITY, 0.8);
     nh_.param("MAX_VELOCITY", MAX_VELOCITY, 1.0);
     nh_.param("MIN_VELOCITY", MIN_VELOCITY, 0.0);
     nh_.param("MAX_OMEGA", MAX_OMEGA, 0.8);
     nh_.param("MAX_ACCELERATION", MAX_ACCELERATION, 1.0);
-    nh_.param("MAX_D_OMEGA", MAX_D_OMEGA, 2.0);
+    nh_.param("MAX_ANG_ACCELERATION", MAX_ANG_ACCELERATION, 2.0);
     //local_nh.param("MAX_DIST", MAX_DIST, {10.0});
     nh_.param("VELOCITY_RES", VELOCITY_RES, 0.05);
     nh_.param("OMEGA_RES", OMEGA_RES, 0.05);
@@ -48,9 +45,8 @@ Window Planner::get_window(const geometry_msgs::Twist& curr_vel){
 
     window.min_vel = std::max((curr_vel.linear.x - MAX_ACCELERATION*DT), MIN_VELOCITY);
     window.max_vel = std::min((curr_vel.linear.x + MAX_ACCELERATION*DT), MAX_VELOCITY);
-    window.min_omega = std::max((curr_vel.angular.z - MAX_D_OMEGA*DT), -MAX_OMEGA);
-    window.max_omega = std::min((curr_vel.angular.z + MAX_D_OMEGA*DT),  MAX_OMEGA);
-    /// MAX D OMEGA is the angular acceleration alpha ??
+    window.min_omega = std::max((curr_vel.angular.z - MAX_ANG_ACCELERATION*DT), -MAX_OMEGA);
+    window.max_omega = std::min((curr_vel.angular.z + MAX_ANG_ACCELERATION*DT),  MAX_OMEGA);
 
     return window;
 }
@@ -70,9 +66,9 @@ void Planner::best_dwa_selection(const Window &window,const Eigen::Vector3d &goa
     for(double v=window.min_vel; v <= window.max_vel; v+=VELOCITY_RES){
         for(double w=window.min_omega; w<=window.max_omega; w+=OMEGA_RES){
              
-            State state(curr_pose_.pose.position.x, curr_pose_.pose.position.y, tf::getYaw(curr_pose_.pose.orientation), curr_vel_.linear.x, curr_vel_.angular.z);
+            State state(0.0, 0.0, 0.0, curr_vel_.linear.x, curr_vel_.angular.z);
             std::vector<State> temp_traj;
-            for(double t=0; t<=SIM_TIME; t+=DT){
+            for(double t=0.0; t<=SIM_TIME; t+=DT){
                 simulate_dynamics(state, v, w);
                 temp_traj.push_back(state);
             }
@@ -86,49 +82,10 @@ void Planner::best_dwa_selection(const Window &window,const Eigen::Vector3d &goa
     }
 
     //trajectory table populated
-    //visulaize
-    //std::cout << "max vel : " << window.max_vel << " min vel : " << window.min_vel << "\n";
-    //std::cout << "max omega : " << window.max_omega << " min omega : " << window.min_omega << "\n";
-
     show_dwa_trajectories(trajectory_table);
-    //visualize_trajectories(trajectory_table);
+
 
     return;
-    //std::cout << "SIZE : "  << trajectory_table.size() << trajectory_table[0].size() << "\n";
-
-}
-void Planner::visualize_trajectories(const std::vector<std::vector<State>>& trajectory_table)
-{
-    visualization_msgs::Marker Blob;
-
-    Blob.header.frame_id = "/base_footprint";
-    Blob.header.stamp = ros::Time::now();
-
-    
-    Blob.type = visualization_msgs::Marker::SPHERE;
-    Blob.action = visualization_msgs::Marker::ADD;
-
-    Blob.scale.x = Blob.scale.y = Blob.scale.z = 0.01;
-    Blob.color.r = 1.0;
-    Blob.color.a = 1.0;
-
-    for (int i=0; i< trajectory_table.size(); i++) {
-        Blob.id = count_++;
-
-        for (int j = 0; j < trajectory_table[i].size(); j++) {
-            Blob.pose.position.x =  trajectory_table[i][j].x;
-            Blob.pose.position.y = trajectory_table[i][j].y;
-            Blob.pose.orientation.x = 0.0;
-            Blob.pose.orientation.y = 0.0;
-            Blob.pose.orientation.z = 0.0;
-            Blob.pose.orientation.w = 1.0;
-            points_pub.publish(Blob);
-
-        }
-        
-    }
-
-    std::cout << "viz pubbing points" << "\n";
 
 }
 
@@ -141,19 +98,19 @@ void Planner::show_dwa_trajectories(const std::vector<std::vector<State>> &traje
     traj.header.frame_id = "/base_footprint";
     traj.header.stamp = ros::Time::now();
 
-    traj.id = count_++;
+    traj.id = 0;
     traj.type = visualization_msgs::Marker::LINE_STRIP;
-    traj.action = visualization_msgs::Marker::ADD;
+    //traj.action = visualization_msgs::Marker::ADD;
 
-    traj.pose.position.x = 0;
-    traj.pose.position.y = 0;
+    traj.pose.position.x = 0.0;//curr_pose_.pose.position.x;
+    traj.pose.position.y = 0.0;//curr_pose_.pose.position.y;
     traj.pose.position.z = 0;
-    traj.pose.orientation.x = 0.0;
-    traj.pose.orientation.y = 0.0;
-    traj.pose.orientation.z = 0.0;
-    traj.pose.orientation.w = 1.0;
+    traj.pose.orientation.x = 0.0;//curr_pose_.pose.orientation.x;
+    traj.pose.orientation.y = 0.0;//curr_pose_.pose.orientation.y;
+    traj.pose.orientation.z = 0.0;//curr_pose_.pose.orientation.z;
+    traj.pose.orientation.w = 1.0;//curr_pose_.pose.orientation.w;
 
-    traj.scale.x = traj.scale.y = traj.scale.z = 0.01;
+    traj.scale.x = traj.scale.y = traj.scale.z = 0.005;
     
     traj.color.r = 1.0;
     traj.color.a = 1.0;
@@ -172,10 +129,8 @@ void Planner::show_dwa_trajectories(const std::vector<std::vector<State>> &traje
             p.x = trajectory_table[i][j].x;
             p.y = trajectory_table[i][j].y;
             traj.points.push_back(p);
-            //std::cout << trajectory_table[i][j].x << "," << trajectory_table[i][j].y << " ";
         }
         traj_list.markers.push_back(traj);
-        //std::cout << "\n";
     }
     std::cout << "vis pubbing" << "\n";
     trajectories_viz_pub.publish(traj_list);

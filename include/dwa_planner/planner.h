@@ -17,11 +17,19 @@
 
 class Window{
     public:
-        Window(double, double, double, double){}
         double min_vel;
         double max_vel;
         double min_omega;
         double max_omega;
+
+        //constructor
+        Window(double min_vel, double max_vel, double min_omega, double max_omega){
+            this->min_vel = min_vel;
+            this->max_vel = max_vel;
+            this->min_omega = min_omega;
+            this->max_omega = max_omega;
+        }
+        
 };
 
 class Planner{
@@ -32,7 +40,7 @@ class Planner{
         double MIN_VELOCITY;
         double MAX_OMEGA;
         double MAX_ACCELERATION;
-        double MAX_D_OMEGA;
+        double MAX_ANG_ACCELERATION;
         //double MAX_DIST;
         double VELOCITY_RES;
         double OMEGA_RES;
@@ -75,7 +83,6 @@ class Planner{
         geometry_msgs::PoseWithCovariance curr_pose_;
         int count_ = INT_MIN;
 
-        
 };
 
 #endif //__PLANNER_H
