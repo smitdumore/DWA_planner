@@ -36,7 +36,7 @@ include_directories(
 ## Build ##
 ###########
 
-add_executable(planner_node src/node.cpp)
+add_executable(planner_node src/node.cpp src/planner.cpp)
 add_dependencies(planner_node ${dwa_planner_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 

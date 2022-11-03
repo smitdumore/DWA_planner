@@ -12,42 +12,70 @@
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 #include <geometry_msgs/Twist.h>
-/*
-class Planner{
-    private:
-
-
-
-
-    public:
-        // constructor
-        Planner();
-
-        //methods
-        void run();
-        void scan_callback(const sensor_msgs::LaserScan::ConstPtr &);
-        void odom_callback(const geometry_msgs::PoseStamped::ConstPtr &);
-        
-
-        // members
-        ros::Subscriber scan_sub;
-        ros::Subscriber odom_sub;
-
-        //global vars
-        bool scan_updated_ = false;
-        bool pose_updated_ = false;
-        double curr_vel_ = 0.0;
-
-};
-
+#include "dwa_planner/state.h"
+#include <math.h>
 
 class Window{
     public:
-        Window(const double, const double, const double, const double);
+        Window(double, double, double, double){}
         double min_vel;
         double max_vel;
         double min_omega;
         double max_omega;
 };
-*/
+
+class Planner{
+    private:
+        ros::NodeHandle nh_;
+        double TARGET_VELOCITY;
+        double MAX_VELOCITY;
+        double MIN_VELOCITY;
+        double MAX_OMEGA;
+        double MAX_ACCELERATION;
+        double MAX_D_OMEGA;
+        //double MAX_DIST;
+        double VELOCITY_RES;
+        double OMEGA_RES;
+        //double ANGLE_RESOLUTION;
+        double SIM_TIME;
+        //double TO_GOAL_COST_GAIN;
+        //double SPEED_COST_GAIN;
+        //double OBSTACLE_COST_GAIN;
+        double DT;
+        double HZ;
+        //double GOAL_THRESHOLD;
+        //double TURN_DIRECTION_THRESHOLD;
+
+
+    public:
+        // constructor
+        Planner(ros::NodeHandle &nh);
+
+        //methods
+        void run();
+        void scan_callback(const sensor_msgs::LaserScan::ConstPtr &);
+        void odom_callback(const nav_msgs::Odometry::ConstPtr &);
+        void best_dwa_selection(const Window &,const Eigen::Vector3d &);
+        Window get_window(const geometry_msgs::Twist&);
+        void show_dwa_trajectories(const std::vector<std::vector<State>> &);
+        void simulate_dynamics(State &s, double , double );
+        void visualize_trajectories(const std::vector<std::vector<State>>& );
+
+        // members
+        ros::Subscriber scan_sub;
+        ros::Subscriber odom_sub;
+        ros::Publisher trajectories_viz_pub;
+        ros::Publisher test_pub;
+        ros::Publisher points_pub;
+
+        //global vars
+        bool scan_updated_ = false;
+        bool pose_updated_ = false;
+        geometry_msgs::Twist curr_vel_;
+        geometry_msgs::PoseWithCovariance curr_pose_;
+        int count_ = INT_MIN;
+
+        
+};
+
 #endif //__PLANNER_H

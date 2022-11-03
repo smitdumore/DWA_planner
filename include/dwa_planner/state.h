@@ -4,7 +4,7 @@
 class State
 {
     public:
-        State(double, double, double, double, double);
+        State(double, double, double, double, double){}
 
         double x;
         double y;
