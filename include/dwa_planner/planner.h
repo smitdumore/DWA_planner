@@ -46,8 +46,8 @@ class Planner{
         double OMEGA_RES;
         //double ANGLE_RESOLUTION;
         double SIM_TIME;
-        //double TO_GOAL_COST_GAIN;
-        //double SPEED_COST_GAIN;
+        double TO_GOAL_COST_GAIN;
+        double SPEED_COST_GAIN;
         //double OBSTACLE_COST_GAIN;
         double DT;
         double HZ;
@@ -63,18 +63,20 @@ class Planner{
         void run();
         void scan_callback(const sensor_msgs::LaserScan::ConstPtr &);
         void odom_callback(const nav_msgs::Odometry::ConstPtr &);
-        void best_dwa_selection(const Window &,const Eigen::Vector3d &);
+        std::vector<State> best_dwa_selection(const Window &,const Eigen::Vector3d &);
         Window get_window(const geometry_msgs::Twist&);
         void show_dwa_trajectories(const std::vector<std::vector<State>> &);
         void simulate_dynamics(State &s, double , double );
         void visualize_trajectories(const std::vector<std::vector<State>>& );
+        double get_goal_cost(const std::vector<State> &, const Eigen::Vector3d &);
+        double get_speed_cost(const std::vector<State> &, const double );
+        void show_best_trajectory(const std::vector<State> &);
 
         // members
         ros::Subscriber scan_sub;
         ros::Subscriber odom_sub;
         ros::Publisher trajectories_viz_pub;
-        ros::Publisher test_pub;
-        ros::Publisher points_pub;
+        ros::Publisher best_traj_viz_pub;
 
         //global vars
         bool scan_updated_ = false;
@@ -82,6 +84,7 @@ class Planner{
         geometry_msgs::Twist curr_vel_;
         geometry_msgs::PoseWithCovariance curr_pose_;
         int count_ = INT_MIN;
+        bool dwa_converged_ = false;
 
 };
 
