@@ -40,8 +40,8 @@ void Planner::odom_callback(const nav_msgs::Odometry::ConstPtr &odom_msg){
     curr_vel_ = odom_msg->twist.twist;
 
     /********************/
-    //curr_vel_.linear.x = 0.1;
-    //curr_vel_.angular.z = 0.1;
+    curr_vel_.linear.x = 0.2;
+    curr_vel_.angular.z = 0.2;
     /********************/
      
 }
