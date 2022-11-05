@@ -48,7 +48,7 @@ class Planner{
         double SIM_TIME;
         double TO_GOAL_COST_GAIN;
         double SPEED_COST_GAIN;
-        //double OBSTACLE_COST_GAIN;
+        double OBSTACLE_COST_GAIN;
         double DT;
         double HZ;
         //double GOAL_THRESHOLD;
@@ -71,12 +71,15 @@ class Planner{
         double get_goal_cost(const std::vector<State> &, const Eigen::Vector3d &);
         double get_speed_cost(const std::vector<State> &, const double );
         void show_best_trajectory(const std::vector<State> &);
+        double get_obstacle_cost(const std::vector<State> &, const std::vector<std::vector<double>> &);
+        void show_goal(Eigen::Vector3d &);
 
         // members
         ros::Subscriber scan_sub;
         ros::Subscriber odom_sub;
         ros::Publisher trajectories_viz_pub;
         ros::Publisher best_traj_viz_pub;
+        ros::Publisher goal_vis_pub;
 
         //global vars
         bool scan_updated_ = false;
@@ -85,7 +88,7 @@ class Planner{
         geometry_msgs::PoseWithCovariance curr_pose_;
         int count_ = INT_MIN;
         bool dwa_converged_ = false;
-
+        std::vector<std::vector<double>> local_obstacles_;
 };
 
 #endif //__PLANNER_H
