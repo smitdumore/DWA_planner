@@ -22,7 +22,7 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh){
     nh_.param("SIM_TIME", SIM_TIME, 3.0);
     nh_.param("TO_GOAL_COST_GAIN", TO_GOAL_COST_GAIN, 1.0);
     nh_.param("SPEED_COST_GAIN", SPEED_COST_GAIN, 1.0);
-    nh_.param("OBSTACLE_COST_GAIN", OBSTACLE_COST_GAIN, 1.0);
+    nh_.param("OBSTACLE_COST_GAIN", OBSTACLE_COST_GAIN, 5.0);
     //local_nh.param("GOAL_THRESHOLD", GOAL_THRESHOLD, {0.3});
     //local_nh.param("TURN_DIRECTION_THRESHOLD", TURN_DIRECTION_THRESHOLD, {1.0});
     DT = 1.0 / HZ;
@@ -35,9 +35,9 @@ void Planner::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg){
     for(auto r : scan_msg->ranges){
         
         /******/
-        // 5m //
+        // 20m //
         /******/
-        if(std::isinf(r) or std::isnan(r) or r > 5.0) continue;
+        if(std::isinf(r) or std::isnan(r) or r > 20.0) continue;
 
         double x = r * cos(angle);
         double y = r * sin(angle);
@@ -57,8 +57,8 @@ void Planner::odom_callback(const nav_msgs::Odometry::ConstPtr &odom_msg){
     curr_vel_ = odom_msg->twist.twist;
 
     /********************/
-    //curr_vel_.linear.x = 0.2;
-    //curr_vel_.angular.z = 0.0;
+    curr_vel_.linear.x = 0.2;
+    curr_vel_.angular.z = 0.0;
     /********************/
      
 }
@@ -150,7 +150,7 @@ void Planner::show_dwa_trajectories(const std::vector<std::vector<State>> &traje
     traj.pose.orientation.z = 0.0;
     traj.pose.orientation.w = 1.0;
 
-    traj.scale.x = traj.scale.y = traj.scale.z = 0.005;
+    traj.scale.x = traj.scale.y = traj.scale.z = 0.01;
     traj.color.r = 1.0;
     traj.color.a = 0.5;
     
@@ -180,7 +180,7 @@ void Planner::show_best_trajectory(const std::vector<State> &best_trajectory) {
     best_traj.header.frame_id = "base_footprint";
     best_traj.id = 1;
     best_traj.type = visualization_msgs::Marker::LINE_STRIP;
-    best_traj.scale.x = best_traj.scale.y = 0.01;
+    best_traj.scale.x = best_traj.scale.y = 0.02;
     best_traj.action = visualization_msgs::Marker::ADD;
     best_traj.pose.orientation.w = 1.0;
     best_traj.color.g = 1.0;
@@ -261,7 +261,7 @@ double Planner::get_obstacle_cost(const std::vector<State> &trajectory, const st
                                                                 (state.y - scan_pt[1])*(state.y - scan_pt[1]));
             if(current_distance <= 0.01){
                 /******/
-                // 0.1 //
+                // 0.01 //
                 /******/
 
                 cost = DBL_MAX;
@@ -294,7 +294,7 @@ void Planner::run(){
         // using tf, convert the goal to robot frame
         // GOAL x,y,heading in robot frame
          
-        Eigen::Vector3d goal(2.0, 2.0, 0.0);
+        Eigen::Vector3d goal(1.5, 0.5, 0.0);
         show_goal(goal);
 
         std::vector<State> best_trajectory = best_dwa_selection(dynamic_window, goal);

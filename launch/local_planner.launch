@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+
+<launch>
+    <arg name="planner_params" default="$(find dwa_planner)/config/params.yaml"/>
+    <rosparam command="load" file="$(arg planner_params)"/>
+    <node pkg="dwa_planner" type="planner_node" name="planner_node">
+        
+    </node>
+</launch>
