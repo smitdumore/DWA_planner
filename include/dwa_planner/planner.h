@@ -80,6 +80,7 @@ class Planner{
         ros::Publisher trajectories_viz_pub;
         ros::Publisher best_traj_viz_pub;
         ros::Publisher goal_vis_pub;
+        ros::Publisher cmd_vel_pub_;
 
         //global vars
         bool scan_updated_ = false;

@@ -7,6 +7,7 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh){
     trajectories_viz_pub = nh_.advertise<visualization_msgs::MarkerArray>("/dwa_trajs", 10);
     best_traj_viz_pub = nh_.advertise<visualization_msgs::MarkerArray>("/best_traj", 10);
     goal_vis_pub = nh_.advertise<visualization_msgs::Marker>("/goal", 10);
+    cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
 
     nh_.param("HZ", HZ, 20.0);
     nh_.param("TARGET_VELOCITY", TARGET_VELOCITY, 0.8);
@@ -54,13 +55,7 @@ void Planner::odom_callback(const nav_msgs::Odometry::ConstPtr &odom_msg){
     pose_updated_ = true;
 
     curr_pose_ = odom_msg->pose;
-    curr_vel_ = odom_msg->twist.twist;
-
-    /********************/
-    curr_vel_.linear.x = 0.2;
-    curr_vel_.angular.z = 0.0;
-    /********************/
-     
+    curr_vel_ = odom_msg->twist.twist;     
 }
 
 Window Planner::get_window(const geometry_msgs::Twist& curr_vel){
@@ -299,8 +294,13 @@ void Planner::run(){
 
         std::vector<State> best_trajectory = best_dwa_selection(dynamic_window, goal);
         if(!dwa_converged_) ROS_ERROR("DWA Solution NOT found ");
-
         show_best_trajectory(best_trajectory);
+
+        geometry_msgs::Twist vel_msg;
+
+        vel_msg.linear.x = best_trajectory[0].velocity;
+        vel_msg.angular.z = best_trajectory[0].omega;
+        //cmd_vel_pub_.publish(vel_msg);
 
         ros::spinOnce();
         loop_rate.sleep();
