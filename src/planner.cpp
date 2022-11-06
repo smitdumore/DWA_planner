@@ -2,8 +2,8 @@
 
 Planner::Planner(ros::NodeHandle &nh):nh_(nh){
 
-    scan_sub = nh_.subscribe("/scan", 1, &Planner::scan_callback, this);
-    odom_sub = nh_.subscribe("/odom", 10, &Planner::odom_callback, this);
+    scan_sub = nh_.subscribe("scan", 10, &Planner::scan_callback, this);
+    odom_sub = nh_.subscribe("odom", 10, &Planner::odom_callback, this);
     trajectories_viz_pub = nh_.advertise<visualization_msgs::MarkerArray>("/dwa_trajs", 10);
     best_traj_viz_pub = nh_.advertise<visualization_msgs::MarkerArray>("/best_traj", 10);
     goal_vis_pub = nh_.advertise<visualization_msgs::Marker>("/goal", 10);
@@ -23,7 +23,7 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh){
     nh_.param("SIM_TIME", SIM_TIME, 3.0);
     nh_.param("TO_GOAL_COST_GAIN", TO_GOAL_COST_GAIN, 1.0);
     nh_.param("SPEED_COST_GAIN", SPEED_COST_GAIN, 1.0);
-    nh_.param("OBSTACLE_COST_GAIN", OBSTACLE_COST_GAIN, 5.0);
+    nh_.param("OBSTACLE_COST_GAIN", OBSTACLE_COST_GAIN, 1.0);
     //local_nh.param("GOAL_THRESHOLD", GOAL_THRESHOLD, {0.3});
     //local_nh.param("TURN_DIRECTION_THRESHOLD", TURN_DIRECTION_THRESHOLD, {1.0});
     DT = 1.0 / HZ;
@@ -34,11 +34,8 @@ void Planner::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg){
     local_obstacles_.clear();
     double angle = scan_msg->angle_min;
     for(auto r : scan_msg->ranges){
-        
-        /******/
-        // 20m //
-        /******/
-        if(std::isinf(r) or std::isnan(r) or r > 20.0) continue;
+
+        //if(std::isinf(r) or std::isnan(r) or r > 20.0) continue;
 
         double x = r * cos(angle);
         double y = r * sin(angle);
@@ -52,20 +49,20 @@ void Planner::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg){
 
 
 void Planner::odom_callback(const nav_msgs::Odometry::ConstPtr &odom_msg){
+    
     pose_updated_ = true;
-
     curr_pose_ = odom_msg->pose;
-    curr_vel_ = odom_msg->twist.twist;     
+    curr_vel_ = odom_msg->twist.twist;
 }
 
-Window Planner::get_window(const geometry_msgs::Twist& curr_vel){
+Window Planner::get_window(){
 
-    Window window(MIN_VELOCITY, MAX_VELOCITY, -MAX_OMEGA, MAX_OMEGA);
+    Window window(MIN_VELOCITY, MAX_VELOCITY, -MAX_OMEGA, MAX_OMEGA); 
 
-    window.min_vel = std::max((curr_vel.linear.x - MAX_ACCELERATION*DT), MIN_VELOCITY);
-    window.max_vel = std::min((curr_vel.linear.x + MAX_ACCELERATION*DT), MAX_VELOCITY);
-    window.min_omega = std::max((curr_vel.angular.z - MAX_ANG_ACCELERATION*DT), -MAX_OMEGA);
-    window.max_omega = std::min((curr_vel.angular.z + MAX_ANG_ACCELERATION*DT),  MAX_OMEGA);
+    window.min_vel = std::max((curr_vel_.linear.x - MAX_ACCELERATION*DT), MIN_VELOCITY);
+    window.max_vel = std::min((curr_vel_.linear.x + MAX_ACCELERATION*DT), MAX_VELOCITY);
+    window.min_omega = std::max((curr_vel_.angular.z - MAX_ANG_ACCELERATION*DT), -MAX_OMEGA);
+    window.max_omega = std::min((curr_vel_.angular.z + MAX_ANG_ACCELERATION*DT),  MAX_OMEGA);
 
     return window;
 }
@@ -74,10 +71,6 @@ std::vector<State> Planner::best_dwa_selection(const Window &window,const Eigen:
 
     dwa_converged_ = false;
     double min_cost = DBL_MAX;
-
-    //double min_obs_cost = min_cost;
-    //double min_goal_cost = min_cost;
-    //double min_speed_cost = min_cost;
 
     std::vector<std::vector<State>> trajectory_table;
     std::vector<State> best_trajectory;
@@ -100,7 +93,7 @@ std::vector<State> Planner::best_dwa_selection(const Window &window,const Eigen:
 
             double cumulative_cost = TO_GOAL_COST_GAIN*cost_on_goal + SPEED_COST_GAIN*cost_on_speed + OBSTACLE_COST_GAIN*cost_on_obs;
 
-            if(min_cost >= cumulative_cost){
+            if(cumulative_cost <= min_cost){
                 min_cost = cumulative_cost;
                 best_trajectory = temp_traj;
                 dwa_converged_ = true;
@@ -111,6 +104,7 @@ std::vector<State> Planner::best_dwa_selection(const Window &window,const Eigen:
 
     //trajectory table populated
     show_dwa_trajectories(trajectory_table);
+    ROS_INFO("Traj Table Created and Published");
 
     // updating minimum cost trajectory
     if(min_cost == DBL_MAX){
@@ -118,6 +112,7 @@ std::vector<State> Planner::best_dwa_selection(const Window &window,const Eigen:
         State state(0.0, 0.0, 0.0, curr_vel_.linear.x, curr_vel_.angular.z);
         traj.push_back(state);
         dwa_converged_  = false;
+        ROS_ERROR("INFINITE COST");
         best_trajectory = traj;
     }
 
@@ -255,9 +250,6 @@ double Planner::get_obstacle_cost(const std::vector<State> &trajectory, const st
             double current_distance = sqrt((state.x - scan_pt[0])*(state.x - scan_pt[0]) + 
                                                                 (state.y - scan_pt[1])*(state.y - scan_pt[1]));
             if(current_distance <= 0.01){
-                /******/
-                // 0.01 //
-                /******/
 
                 cost = DBL_MAX;
                 return cost;
@@ -265,6 +257,9 @@ double Planner::get_obstacle_cost(const std::vector<State> &trajectory, const st
             min_dist = std::min(min_dist, current_distance);
         }
     }
+
+    if(min_dist == 0.0) return DBL_MAX;
+
     cost = 1.0 / min_dist;
     return cost;
 }
@@ -273,43 +268,69 @@ void Planner::run(){
     ros::Rate loop_rate(HZ);
     while(ros::ok()){
         
-        if(!scan_updated_){
+        /*
+        if(scan_updated_ == false){
             ROS_ERROR("Waiting for scan init...");
             ros::Duration(1.0).sleep();
         }
         
-        if(!pose_updated_){
+        if(pose_updated_ == false){
             ROS_ERROR("Waiting for odom init...");
             ros::Duration(1.0).sleep();
         }
-    
-        Window dynamic_window = get_window(curr_vel_);
+        */
+        /*
+        try{
+            tf_base_to_odom_ = tf_buffer_.lookupTransform("odom","base_footprint",ros::Time(0));
+        }
+        catch (tf::TransformException& ex){
+            ROS_ERROR("%s",ex.what());
+            ros::Duration(1.0).sleep();
+        }  
+        */
+        
 
-        //get goal in odom frame 
-        // using tf, convert the goal to robot frame
-        // GOAL x,y,heading in robot frame
-         
-        Eigen::Vector3d goal(1.5, 0.5, 0.0);
-        show_goal(goal);
+        /*
+        // goal in odom
+        double x_odom = 0.0;
+        double y_odom = 0.0;
+        
+        const auto translation = tf_base_to_odom_.transform.translation;
+        const double yaw = tf::getYaw(tf_base_to_odom_.transform.rotation);
 
-        std::vector<State> best_trajectory = best_dwa_selection(dynamic_window, goal);
+        double x_base = x_odom*cos(yaw) - y_odom*sin(yaw) + translation.x;
+        double y_base = y_odom*sin(yaw) + y_odom*cos(yaw) + translation.y;
+
+        Eigen::Vector3d goal_in_base(x_base, y_base, yaw);      //yaw = tan inv (y/x)
+
+        show_goal(goal_in_base);
+        */  
+
+              
+        
+        Window dynamic_window = get_window();
+
+        Eigen::Vector3d goal_in_base(1.0, 0.0, 0.0);    //(front , )
+        show_goal(goal_in_base);
+
+        std::vector<State> best_trajectory = best_dwa_selection(dynamic_window, goal_in_base);
+        
         if(!dwa_converged_) ROS_ERROR("DWA Solution NOT found ");
+
         show_best_trajectory(best_trajectory);
 
+        
         geometry_msgs::Twist vel_msg;
 
         vel_msg.linear.x = best_trajectory[0].velocity;
         vel_msg.angular.z = best_trajectory[0].omega;
-        //cmd_vel_pub_.publish(vel_msg);
+        cmd_vel_pub_.publish(vel_msg);
+
+        dwa_converged_ =false;
+        
 
         ros::spinOnce();
         loop_rate.sleep();
     }
 
 }
-
-/***** issues *****/
-// 1. obtacles deteection and cost, debug by looking at laser scans
-// 2. get goal in odom coordinates and publish in odom 
-// 3. use .yaml file for param tuning
-  

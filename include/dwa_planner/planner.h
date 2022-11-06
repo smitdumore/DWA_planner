@@ -64,7 +64,7 @@ class Planner{
         void scan_callback(const sensor_msgs::LaserScan::ConstPtr &);
         void odom_callback(const nav_msgs::Odometry::ConstPtr &);
         std::vector<State> best_dwa_selection(const Window &,const Eigen::Vector3d &);
-        Window get_window(const geometry_msgs::Twist&);
+        Window get_window();
         void show_dwa_trajectories(const std::vector<std::vector<State>> &);
         void simulate_dynamics(State &s, double , double );
         void visualize_trajectories(const std::vector<std::vector<State>>& );
@@ -90,6 +90,9 @@ class Planner{
         int count_ = INT_MIN;
         bool dwa_converged_ = false;
         std::vector<std::vector<double>> local_obstacles_;
+        //tf2_ros::TransformListener tf2_listener_;
+        //tf2_ros::Buffer tf_buffer_;
+        //geometry_msgs::TransformStamped tf_base_to_odom_;
 };
 
 #endif //__PLANNER_H
