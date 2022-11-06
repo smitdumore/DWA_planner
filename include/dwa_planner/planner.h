@@ -90,9 +90,10 @@ class Planner{
         int count_ = INT_MIN;
         bool dwa_converged_ = false;
         std::vector<std::vector<double>> local_obstacles_;
-        //tf2_ros::TransformListener tf2_listener_;
-        //tf2_ros::Buffer tf_buffer_;
-        //geometry_msgs::TransformStamped tf_base_to_odom_;
+        tf2_ros::TransformListener tf2_listener_;
+        tf2_ros::Buffer tf_buffer_;
+        geometry_msgs::TransformStamped tf_base_to_odom_;
+        //tf::TransformListener listener_;
 };
 
 #endif //__PLANNER_H

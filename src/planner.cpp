@@ -1,6 +1,6 @@
 #include "dwa_planner/planner.h"
 
-Planner::Planner(ros::NodeHandle &nh):nh_(nh){
+Planner::Planner(ros::NodeHandle &nh):nh_(nh), tf2_listener_(tf_buffer_){
 
     scan_sub = nh_.subscribe("scan", 10, &Planner::scan_callback, this);
     odom_sub = nh_.subscribe("odom", 10, &Planner::odom_callback, this);
@@ -279,21 +279,21 @@ void Planner::run(){
             ros::Duration(1.0).sleep();
         }
         */
-        /*
+        
         try{
-            tf_base_to_odom_ = tf_buffer_.lookupTransform("odom","base_footprint",ros::Time(0));
+            tf_base_to_odom_ = tf_buffer_.lookupTransform("base_footprint", "odom",ros::Time(0));
         }
         catch (tf::TransformException& ex){
             ROS_ERROR("%s",ex.what());
             ros::Duration(1.0).sleep();
         }  
-        */
         
-
-        /*
         // goal in odom
-        double x_odom = 0.0;
-        double y_odom = 0.0;
+        /*************/
+        //   GOAL     //
+        /*************/ 
+        double x_odom = 1.0;
+        double y_odom = 1.0;
         
         const auto translation = tf_base_to_odom_.transform.translation;
         const double yaw = tf::getYaw(tf_base_to_odom_.transform.rotation);
@@ -301,17 +301,14 @@ void Planner::run(){
         double x_base = x_odom*cos(yaw) - y_odom*sin(yaw) + translation.x;
         double y_base = y_odom*sin(yaw) + y_odom*cos(yaw) + translation.y;
 
-        Eigen::Vector3d goal_in_base(x_base, y_base, yaw);      //yaw = tan inv (y/x)
+        //ROS_INFO("BASE X: %f", x_base);
+        //ROS_INFO("BASE Y: %f", y_base);
 
-        show_goal(goal_in_base);
-        */  
-
-              
         
-        Window dynamic_window = get_window();
-
-        Eigen::Vector3d goal_in_base(1.0, 0.0, 0.0);    //(front , )
+        Eigen::Vector3d goal_in_base(x_base, y_base, 0.0);
         show_goal(goal_in_base);
+
+        Window dynamic_window = get_window();
 
         std::vector<State> best_trajectory = best_dwa_selection(dynamic_window, goal_in_base);
         
@@ -319,7 +316,6 @@ void Planner::run(){
 
         show_best_trajectory(best_trajectory);
 
-        
         geometry_msgs::Twist vel_msg;
 
         vel_msg.linear.x = best_trajectory[0].velocity;
@@ -328,7 +324,6 @@ void Planner::run(){
 
         dwa_converged_ =false;
         
-
         ros::spinOnce();
         loop_rate.sleep();
     }
