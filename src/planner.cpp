@@ -14,8 +14,8 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh), tf2_listener_(tf_buffer_){
     nh_.param("MAX_VELOCITY", MAX_VELOCITY, 1.0);
     nh_.param("MIN_VELOCITY", MIN_VELOCITY, 0.0);
     nh_.param("MAX_OMEGA", MAX_OMEGA, 0.8);
-    nh_.param("MAX_ACCELERATION", MAX_ACCELERATION, 1.0);
-    nh_.param("MAX_ANG_ACCELERATION", MAX_ANG_ACCELERATION, 2.0);
+    nh_.param("MAX_ACCELERATION", MAX_ACCELERATION, 2.0);
+    nh_.param("MAX_ANG_ACCELERATION", MAX_ANG_ACCELERATION, 3.0);
     //local_nh.param("MAX_DIST", MAX_DIST, {10.0});
     nh_.param("VELOCITY_RES", VELOCITY_RES, 0.05);
     nh_.param("OMEGA_RES", OMEGA_RES, 0.05);
@@ -24,7 +24,7 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh), tf2_listener_(tf_buffer_){
     nh_.param("TO_GOAL_COST_GAIN", TO_GOAL_COST_GAIN, 1.0);
     nh_.param("SPEED_COST_GAIN", SPEED_COST_GAIN, 1.0);
     nh_.param("OBSTACLE_COST_GAIN", OBSTACLE_COST_GAIN, 1.0);
-    //local_nh.param("GOAL_THRESHOLD", GOAL_THRESHOLD, {0.3});
+    nh_.param("GOAL_THRESHOLD", GOAL_THRESHOLD, 0.3);
     //local_nh.param("TURN_DIRECTION_THRESHOLD", TURN_DIRECTION_THRESHOLD, {1.0});
     DT = 1.0 / HZ;
 }
@@ -268,7 +268,7 @@ void Planner::run(){
     ros::Rate loop_rate(HZ);
     while(ros::ok()){
         
-        /*
+        
         if(scan_updated_ == false){
             ROS_ERROR("Waiting for scan init...");
             ros::Duration(1.0).sleep();
@@ -278,7 +278,7 @@ void Planner::run(){
             ROS_ERROR("Waiting for odom init...");
             ros::Duration(1.0).sleep();
         }
-        */
+        
         
         try{
             tf_base_to_odom_ = tf_buffer_.lookupTransform("base_footprint", "odom",ros::Time(0));
@@ -292,8 +292,8 @@ void Planner::run(){
         /*************/
         //   GOAL     //
         /*************/ 
-        double x_odom = 1.0;
-        double y_odom = 1.0;
+        double x_odom = 5.8;
+        double y_odom = 5.8;
         
         const auto translation = tf_base_to_odom_.transform.translation;
         const double yaw = tf::getYaw(tf_base_to_odom_.transform.rotation);
@@ -317,13 +317,19 @@ void Planner::run(){
         show_best_trajectory(best_trajectory);
 
         geometry_msgs::Twist vel_msg;
-
         vel_msg.linear.x = best_trajectory[0].velocity;
         vel_msg.angular.z = best_trajectory[0].omega;
+
+        if(sqrt((x_base*x_base) + (y_base*y_base)) < GOAL_THRESHOLD){
+            ROS_WARN("Reached.........");
+            vel_msg.linear.x = 0.0;
+            vel_msg.angular.z = 0.0;
+        }
+
         cmd_vel_pub_.publish(vel_msg);
 
+
         dwa_converged_ =false;
-        
         ros::spinOnce();
         loop_rate.sleep();
     }

@@ -51,7 +51,7 @@ class Planner{
         double OBSTACLE_COST_GAIN;
         double DT;
         double HZ;
-        //double GOAL_THRESHOLD;
+        double GOAL_THRESHOLD;
         //double TURN_DIRECTION_THRESHOLD;
 
 
