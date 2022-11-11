@@ -8,7 +8,8 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh), tf2_listener_(tf_buffer_){
     best_traj_viz_pub = nh_.advertise<visualization_msgs::MarkerArray>("/best_traj", 10);
     goal_vis_pub = nh_.advertise<visualization_msgs::Marker>("/goal", 10);
     cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
-
+    
+    // change var names
     nh_.param("HZ", HZ, 20.0);
     nh_.param("TARGET_VELOCITY", TARGET_VELOCITY, 0.8);
     nh_.param("MAX_VELOCITY", MAX_VELOCITY, 1.0);
@@ -26,6 +27,8 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh), tf2_listener_(tf_buffer_){
     nh_.param("OBSTACLE_COST_GAIN", OBSTACLE_COST_GAIN, 1.0);
     nh_.param("GOAL_THRESHOLD", GOAL_THRESHOLD, 0.3);
     //local_nh.param("TURN_DIRECTION_THRESHOLD", TURN_DIRECTION_THRESHOLD, {1.0});
+    nh_.param("GOAL_X", GOAL_X, 0.0);
+    nh_.param("GOAL_Y", GOAL_Y, 0.0);
     DT = 1.0 / HZ;
 }
 
@@ -58,7 +61,8 @@ void Planner::odom_callback(const nav_msgs::Odometry::ConstPtr &odom_msg){
 Window Planner::get_window(){
 
     Window window(MIN_VELOCITY, MAX_VELOCITY, -MAX_OMEGA, MAX_OMEGA); 
-
+    
+    // edit presentation 
     window.min_vel = std::max((curr_vel_.linear.x - MAX_ACCELERATION*DT), MIN_VELOCITY);
     window.max_vel = std::min((curr_vel_.linear.x + MAX_ACCELERATION*DT), MAX_VELOCITY);
     window.min_omega = std::max((curr_vel_.angular.z - MAX_ANG_ACCELERATION*DT), -MAX_OMEGA);
@@ -87,6 +91,7 @@ std::vector<State> Planner::best_dwa_selection(const Window &window,const Eigen:
             }
             trajectory_table.push_back(temp_traj);
 
+            // edit var names and method names
             double cost_on_goal = get_goal_cost(temp_traj, goal);
             double cost_on_speed = get_speed_cost(temp_traj, TARGET_VELOCITY);
             double cost_on_obs = get_obstacle_cost(temp_traj, local_obstacles_);
@@ -287,23 +292,16 @@ void Planner::run(){
             ROS_ERROR("%s",ex.what());
             ros::Duration(1.0).sleep();
         }  
-        
-        // goal in odom
-        /*************/
-        //   GOAL     //
-        /*************/ 
-        double x_odom = 5.8;
-        double y_odom = 5.8;
+
+        //goal in odom
+        double x_odom = GOAL_X;
+        double y_odom = GOAL_Y;
         
         const auto translation = tf_base_to_odom_.transform.translation;
         const double yaw = tf::getYaw(tf_base_to_odom_.transform.rotation);
 
         double x_base = x_odom*cos(yaw) - y_odom*sin(yaw) + translation.x;
         double y_base = y_odom*sin(yaw) + y_odom*cos(yaw) + translation.y;
-
-        //ROS_INFO("BASE X: %f", x_base);
-        //ROS_INFO("BASE Y: %f", y_base);
-
         
         Eigen::Vector3d goal_in_base(x_base, y_base, 0.0);
         show_goal(goal_in_base);
@@ -312,7 +310,7 @@ void Planner::run(){
 
         std::vector<State> best_trajectory = best_dwa_selection(dynamic_window, goal_in_base);
         
-        if(!dwa_converged_) ROS_ERROR("DWA Solution NOT found ");
+        if(!dwa_converged_) ROS_ERROR("DWA Solution NOT found "); // exit code
 
         show_best_trajectory(best_trajectory);
 
@@ -324,6 +322,8 @@ void Planner::run(){
             ROS_WARN("Reached.........");
             vel_msg.linear.x = 0.0;
             vel_msg.angular.z = 0.0;
+            cmd_vel_pub_.publish(vel_msg);
+            return;
         }
 
         cmd_vel_pub_.publish(vel_msg);

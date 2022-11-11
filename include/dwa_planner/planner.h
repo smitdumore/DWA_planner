@@ -52,6 +52,8 @@ class Planner{
         double DT;
         double HZ;
         double GOAL_THRESHOLD;
+        double GOAL_X;
+        double GOAL_Y;
         //double TURN_DIRECTION_THRESHOLD;
 
 
