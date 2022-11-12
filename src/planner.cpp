@@ -318,7 +318,8 @@ void Planner::run(){
         
         
         try{
-            tf_base_to_odom_ = tf_buffer_.lookupTransform("base_footprint", "odom",ros::Time(0));
+            //tf_base_to_odom_ = tf_buffer_.lookupTransform("base_footprint", "odom",ros::Time(0));
+            listener_.waitForTransform("base_footprint", "odom", ros::Time::now(),ros::Duration(1));
         }
         catch (tf::TransformException& ex){
             ROS_ERROR("%s",ex.what());
@@ -328,13 +329,28 @@ void Planner::run(){
         //goal in odom
         double x_odom = GOAL_X;
         double y_odom = GOAL_Y;
-        
-        const auto translation = tf_base_to_odom_.transform.translation;
-        const double yaw = tf::getYaw(tf_base_to_odom_.transform.rotation);
+        geometry_msgs::PointStamped p_odom;
+        p_odom.header.frame_id = "/odom";
+        //p_odom.header.stamp = ros::Time::now();
 
-        double x_base = x_odom*cos(yaw) - y_odom*sin(yaw) + translation.x;
-        double y_base = y_odom*sin(yaw) + y_odom*cos(yaw) + translation.y;
+        geometry_msgs::PointStamped p_base;
+        p_base.header.frame_id = "/base_footprint";
+        //p_base.header.stamp = ros::Time::now();
+
+        p_odom.point.x = GOAL_X;
+        p_odom.point.y = GOAL_Y; 
         
+        //const auto translation = tf_base_to_odom_.transform.translation;
+        //const double yaw = tf::getYaw(tf_base_to_odom_.transform.rotation);
+
+        //double x_base = x_odom*cos(yaw) - y_odom*sin(yaw) + translation.x;
+        //double y_base = y_odom*sin(yaw) + y_odom*cos(yaw) + translation.y;
+
+        listener_.transformPoint("base_footprint", p_odom, p_base);
+
+        double x_base = p_base.point.x;
+        double y_base = p_base.point.y;
+    
         Eigen::Vector3d goal_in_base(x_base, y_base, 0.0);
         show_goal(goal_in_base);
 
