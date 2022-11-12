@@ -75,6 +75,7 @@ class Planner{
         void show_best_trajectory(const std::vector<State> &);
         double get_obstacle_cost(const std::vector<State> &, const std::vector<std::vector<double>> &);
         void show_goal(Eigen::Vector3d &);
+        void show_robot_path();
 
         // members
         ros::Subscriber scan_sub;
@@ -83,6 +84,7 @@ class Planner{
         ros::Publisher best_traj_viz_pub;
         ros::Publisher goal_vis_pub;
         ros::Publisher cmd_vel_pub_;
+        ros::Publisher path_viz_pub;
 
         //global vars
         bool scan_updated_ = false;

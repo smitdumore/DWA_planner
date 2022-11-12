@@ -8,6 +8,7 @@ Planner::Planner(ros::NodeHandle &nh):nh_(nh), tf2_listener_(tf_buffer_){
     best_traj_viz_pub = nh_.advertise<visualization_msgs::MarkerArray>("/best_traj", 10);
     goal_vis_pub = nh_.advertise<visualization_msgs::Marker>("/goal", 10);
     cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+    path_viz_pub =  nh_.advertise<visualization_msgs::Marker>("/path_viz", 10);
     
     // change var names
     nh_.param("HZ", HZ, 20.0);
@@ -125,6 +126,38 @@ std::vector<State> Planner::best_dwa_selection(const Window &window,const Eigen:
 
 }
 
+void Planner::show_robot_path() {
+
+    visualization_msgs::Marker path_marker;
+
+    path_marker.header.frame_id = "/odom";
+    path_marker.header.stamp = ros::Time::now();
+    path_marker.id = count_++;
+    path_marker.type = visualization_msgs::Marker::SPHERE;
+    path_marker.action = visualization_msgs::Marker::ADD;
+
+    path_marker.pose.position.x = curr_pose_.pose.position.x;
+    path_marker.pose.position.y = curr_pose_.pose.position.y;
+    path_marker.pose.position.z = 0;
+    path_marker.pose.orientation.x = 0.0;
+    path_marker.pose.orientation.y = 0.0;
+    path_marker.pose.orientation.z = 0.0;
+    path_marker.pose.orientation.w = 1.0;
+
+    /*
+    geometry_msgs::Point p;
+    p.x = curr_pose_.pose.position.x;
+    p.y = curr_pose_.pose.position.y;
+    path_marker.points.push_back(p);
+    */
+
+    path_marker.scale.x = path_marker.scale.y = path_marker.scale.z = 0.01;
+    path_marker.color.b = 1.0;
+    path_marker.color.a = 1.0;
+
+    path_viz_pub.publish(path_marker);   
+}
+
 void Planner::show_dwa_trajectories(const std::vector<std::vector<State>> &trajectory_table) {
 
     visualization_msgs::MarkerArray traj_list;
@@ -162,8 +195,7 @@ void Planner::show_dwa_trajectories(const std::vector<std::vector<State>> &traje
         }
         traj_list.markers.push_back(traj);
     }
-    trajectories_viz_pub.publish(traj_list);
-    
+    trajectories_viz_pub.publish(traj_list);   
 }
 
 void Planner::show_best_trajectory(const std::vector<State> &best_trajectory) {
@@ -327,6 +359,7 @@ void Planner::run(){
         }
 
         cmd_vel_pub_.publish(vel_msg);
+        show_robot_path();
 
 
         dwa_converged_ =false;
